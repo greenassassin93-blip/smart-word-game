@@ -1,1 +1,178 @@
 
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#6848e8">
+<meta name="description" content="Smart Word — безплатна игра със загадки на български, италиански и английски.">
+<title>Smart Word — Guess the Word</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;padding:18px;min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:Arial,sans-serif;background:linear-gradient(135deg,#6045e8,#c04cff);color:#272044}
+.card{width:100%;max-width:420px;padding:25px;background:#fff;border-radius:24px;text-align:center;box-shadow:0 10px 35px #24104455}
+h1{color:#6848e8;margin:5px 0}
+.subtitle{color:#777;margin-bottom:18px}
+select,input,button{width:100%;padding:13px;margin:7px 0;border-radius:11px;font-size:16px}
+select,input{border:1px solid #ddd;background:#fff}
+button{border:0;background:#6848e8;color:white;font-weight:bold;cursor:pointer}
+#hint{background:#eee9ff;color:#6848e8}
+.emoji{font-size:72px;margin:15px 0}
+.stats{display:flex;justify-content:space-between;background:#f3f0ff;padding:12px;border-radius:12px}
+#message{min-height:28px;font-weight:bold}
+footer{font-size:12px;color:#999;margin-top:18px}
+</style>
+</head>
+<body>
+<main class="card">
+<h1>🧠 Smart Word</h1>
+<p class="subtitle" id="welcome">Играй и познавай думи!</p>
+<select id="language" aria-label="Език">
+<option value="bg">🇧🇬 Български</option>
+<option value="it">🇮🇹 Italiano</option>
+<option value="en">🇬🇧 English</option>
+</select>
+<div class="stats">
+<span id="level">Ниво 1/10</span>
+<span>⭐ <span id="score">0</span></span>
+</div>
+<div class="emoji" id="emoji">🍎</div>
+<h2 id="question">Познай думата!</h2>
+<form id="form">
+<input id="answer" placeholder="Напиши отговора..." autocomplete="off" required>
+<button id="check" type="submit">Провери отговора</button>
+</form>
+<button id="hint">💡 Подсказка</button>
+<button id="next" hidden>Следващо ниво →</button>
+<p id="message" aria-live="polite"></p>
+<footer>Smart Word © 2026</footer>
+</main>
+<script>
+const games={
+bg:{
+welcome:"Играй и познавай думи!",
+placeholder:"Напиши отговора...",
+check:"Провери отговора",hint:"💡 Подсказка",next:"Следващо ниво →",
+correct:"🎉 Браво! Правилен отговор!",wrong:"❌ Опитай отново!",
+clue:"Първата буква е: ",done:"🏆 Завърши всички нива!",
+again:"🔄 Играй отново",
+questions:[
+["🍎","Червен или зелен плод, който расте на дърво.","ябълка"],
+["🐱","Домашно животно, което мяука.","котка"],
+["🌞","Свети в небето през деня.","слънце"],
+["🐶","Верният приятел на човека.","куче"],
+["🍞","Храна, която често ядем с масло.","хляб"],
+["🌙","Виждаме го в небето през нощта.","луна"],
+["🐟","Живее във водата и има перки.","риба"],
+["❄️","Бяло и студено, пада през зимата.","сняг"],
+["🌻","Жълто цвете, което следва слънцето.","слънчоглед"],
+["🏠","Мястото, където живеем.","къща"]
+]},
+it:{
+welcome:"Gioca e indovina le parole!",
+placeholder:"Scrivi la risposta...",
+check:"Controlla la risposta",hint:"💡 Suggerimento",next:"Livello successivo →",
+correct:"🎉 Bravissimo! Risposta corretta!",wrong:"❌ Riprova!",
+clue:"La prima lettera è: ",done:"🏆 Hai completato tutti i livelli!",
+again:"🔄 Gioca ancora",
+questions:[
+["🍎","Frutto rosso o verde che cresce su un albero.","mela"],
+["🐱","Animale domestico che fa miao.","gatto"],
+["🌞","Brilla nel cielo durante il giorno.","sole"],
+["🐶","Il migliore amico dell'uomo.","cane"],
+["🍞","Alimento che mangiamo spesso con il burro.","pane"],
+["🌙","Lo vediamo nel cielo durante la notte.","luna"],
+["🐟","Vive nell'acqua e ha le pinne.","pesce"],
+["❄️","È bianco e freddo e cade in inverno.","neve"],
+["🌻","Fiore giallo che segue il sole.","girasole"],
+["🏠","Il posto in cui viviamo.","casa"]
+]},
+en:{
+welcome:"Play and guess the words!",
+placeholder:"Type your answer...",
+check:"Check answer",hint:"💡 Hint",next:"Next level →",
+correct:"🎉 Well done! Correct answer!",wrong:"❌ Try again!",
+clue:"The first letter is: ",done:"🏆 You completed every level!",
+again:"🔄 Play again",
+questions:[
+["🍎","A red or green fruit that grows on a tree.","apple"],
+["🐱","A pet that says meow.","cat"],
+["🌞","It shines in the sky during the day.","sun"],
+["🐶","A loyal friend of humans.","dog"],
+["🍞","Food often eaten with butter.","bread"],
+["🌙","We see it in the sky at night.","moon"],
+["🐟","It lives in water and has fins.","fish"],
+["❄️","It is white, cold and falls in winter.","snow"],
+["🌻","A yellow flower that follows the sun.","sunflower"],
+["🏠","The place where we live.","house"]
+]}
+};
+let lang="bg",index=0,score=0,solved=false;
+const el=id=>document.getElementById(id);
+function render(){
+const g=games[lang];
+el("welcome").textContent=g.welcome;
+el("answer").placeholder=g.placeholder;
+el("check").textContent=g.check;
+el("hint").textContent=g.hint;
+el("next").textContent=index===g.questions.length-1?g.again:g.next;
+el("score").textContent=score;
+el("message").textContent="";
+el("answer").value="";
+el("answer").disabled=false;
+el("check").hidden=false;
+el("hint").hidden=false;
+el("next").hidden=true;
+solved=false;
+if(index>=g.questions.length){
+el("level").textContent="🏆";
+el("emoji").textContent="🏆";
+el("question").textContent=g.done;
+el("form").hidden=true;
+el("hint").hidden=true;
+el("next").hidden=false;
+el("next").textContent=g.again;
+return;
+}
+el("form").hidden=false;
+el("level").textContent=(lang==="bg"?"Ниво ":"Level ")+(index+1)+"/"+g.questions.length;
+el("emoji").textContent=g.questions[index][0];
+el("question").textContent=g.questions[index][1];
+}
+function normalize(s){
+return s.trim().toLocaleLowerCase(lang).normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\s+/g,"");
+}
+el("form").addEventListener("submit",e=>{
+e.preventDefault();
+if(solved||index>=games[lang].questions.length)return;
+const g=games[lang];
+if(normalize(el("answer").value)===normalize(g.questions[index][2])){
+score+=10;solved=true;
+el("score").textContent=score;
+el("message").textContent=g.correct;
+el("answer").disabled=true;
+el("check").hidden=true;
+el("hint").hidden=true;
+el("next").hidden=false;
+}else{
+el("message").textContent=g.wrong;
+}
+});
+el("hint").addEventListener("click",()=>{
+if(!solved&&index<games[lang].questions.length){
+el("message").textContent=games[lang].clue+games[lang].questions[index][2][0].toLocaleUpperCase(lang);
+}
+});
+el("next").addEventListener("click",()=>{
+if(index>=games[lang].questions.length){index=0;score=0}
+else if(solved)index++;
+else return;
+render();
+});
+el("language").addEventListener("change",e=>{
+lang=e.target.value;index=0;score=0;render();
+});
+render();
+</script>
+</body>
+</html>
